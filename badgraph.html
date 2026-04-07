@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Internet Network Graph v3</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background-color: #D4A017;
+      transition: background-color 0.8s ease;
+    }
+    #graph {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: transparent;
+    }
+    .link {
+      stroke: #5DCAA5;
+      stroke-width: 2;
+      stroke-dasharray: 8 4;
+      transition: stroke 0.4s ease, stroke-width 0.3s ease;
+    }
+    .link.visited {
+      stroke: #7F77DD;
+      stroke-width: 3;
+      stroke-dasharray: none;
+    }
+    .node-circle {
+      cursor: grab;
+      stroke: rgba(255,255,255,0.25);
+      stroke-width: 1.5;
+      transition: fill 0.4s ease, stroke 0.2s;
+    }
+    .node-circle:hover { stroke: rgba(255,255,255,0.9); stroke-width: 2; }
+    .node-circle:active { cursor: grabbing; }
+    .node-label {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      fill: #ffffff;
+      pointer-events: none;
+      text-anchor: middle;
+      transition: fill 0.5s ease;
+    }
+    .tooltip {
+      position: fixed;
+      background: rgba(10,10,10,0.82);
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 8px 13px;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.1);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 100;
+      line-height: 1.7;
+    }
+    /* Full-screen fade overlay for page transition */
+    #fade-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.2s ease;
+      z-index: 9999;
+    }
+    #fade-overlay.go { opacity: 1; pointer-events: all; }
+    #next-btn {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  z-index: 500;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+}
+  </style>
+</head>
+<body>
+<div id="fade-overlay"></div>
+<div class="tooltip" id="tooltip"></div>
+<svg id="graph"></svg>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+var W = window.innerWidth, H = window.innerHeight;
+
+// --- DATA ---
+var nodesData = [
+  { id: "10.0.0.1",    r: 22, fill: "#378ADD", subnet: "10"   },
+  { id: "10.0.0.2",    r: 18, fill: "#378ADD", subnet: "10"   },
+  { id: "10.0.0.3",    r: 16, fill: "#378ADD", subnet: "10"   },
+  { id: "172.16.0.1",  r: 20, fill: "#1D9E75", subnet: "172"  },
+  { id: "172.16.0.2",  r: 17, fill: "#1D9E75", subnet: "172"  },
+  { id: "172.16.0.3",  r: 15, fill: "#1D9E75", subnet: "172"  },
+  { id: "192.168.1.1", r: 19, fill: "#7F77DD", subnet: "1921" },
+  { id: "192.168.1.2", r: 15, fill: "#7F77DD", subnet: "1921" },
+  { id: "192.168.1.3", r: 14, fill: "#7F77DD", subnet: "1921" },
+  { id: "192.168.2.1", r: 21, fill: "#D85A30", subnet: "1922" },
+  { id: "192.168.2.2", r: 16, fill: "#D85A30", subnet: "1922" },
+  { id: "192.168.2.3", r: 14, fill: "#D85A30", subnet: "1922" },
+  { id: "203.0.113.1", r: 23, fill: "#BA7517", subnet: "203"  },
+  { id: "203.0.113.2", r: 18, fill: "#BA7517", subnet: "203"  },
+  { id: "203.0.113.3", r: 15, fill: "#BA7517", subnet: "203"  },
+  { id: "8.8.8.8",     r: 25, fill: "#E24B4A", subnet: "dns"  },
+  { id: "8.8.4.4",     r: 22, fill: "#E24B4A", subnet: "dns"  },
+  { id: "1.1.1.1",     r: 23, fill: "#D4537E", subnet: "cf"   },
+  { id: "9.9.9.9",     r: 19, fill: "#888780", subnet: "quad" },
+  { id: "4.4.4.4",     r: 18, fill: "#888780", subnet: "quad" }
+];
+
+var linksData = [
+  { source: "10.0.0.1",    target: "10.0.0.2",    latency: 5  },
+  { source: "10.0.0.1",    target: "10.0.0.3",    latency: 8  },
+  { source: "10.0.0.2",    target: "172.16.0.1",  latency: 12 },
+  { source: "10.0.0.3",    target: "172.16.0.2",  latency: 15 },
+  { source: "172.16.0.1",  target: "172.16.0.2",  latency: 6  },
+  { source: "172.16.0.1",  target: "172.16.0.3",  latency: 9  },
+  { source: "172.16.0.2",  target: "192.168.1.1", latency: 20 },
+  { source: "172.16.0.3",  target: "192.168.1.2", latency: 18 },
+  { source: "192.168.1.1", target: "192.168.1.2", latency: 4  },
+  { source: "192.168.1.1", target: "192.168.1.3", latency: 7  },
+  { source: "192.168.1.2", target: "192.168.2.1", latency: 25 },
+  { source: "192.168.1.3", target: "192.168.2.2", latency: 22 },
+  { source: "192.168.2.1", target: "192.168.2.2", latency: 5  },
+  { source: "192.168.2.1", target: "192.168.2.3", latency: 10 },
+  { source: "192.168.2.2", target: "203.0.113.1", latency: 30 },
+  { source: "192.168.2.3", target: "203.0.113.2", latency: 28 },
+  { source: "203.0.113.1", target: "203.0.113.2", latency: 8  },
+  { source: "203.0.113.1", target: "203.0.113.3", latency: 11 },
+  { source: "203.0.113.2", target: "8.8.8.8",     latency: 35 },
+  { source: "203.0.113.3", target: "8.8.4.4",     latency: 32 },
+  { source: "8.8.8.8",     target: "8.8.4.4",     latency: 3  },
+  { source: "8.8.8.8",     target: "1.1.1.1",     latency: 14 },
+  { source: "8.8.4.4",     target: "9.9.9.9",     latency: 18 },
+  { source: "1.1.1.1",     target: "9.9.9.9",     latency: 12 },
+  { source: "1.1.1.1",     target: "4.4.4.4",     latency: 16 },
+  { source: "9.9.9.9",     target: "4.4.4.4",     latency: 9  },
+  { source: "4.4.4.4",     target: "10.0.0.1",    latency: 40 },
+  { source: "8.8.8.8",     target: "172.16.0.1",  latency: 50 },
+  { source: "1.1.1.1",     target: "192.168.2.1", latency: 45 },
+  { source: "9.9.9.9",     target: "203.0.113.3", latency: 38 }
+];
+
+// --- STATE ---
+var bgPalette = [
+  "#D4A017","#1A3A8C","#8C1A1A","#1A6B3A","#6B1A8C",
+  "#8C6B1A","#1A8C8C","#8C1A6B","#2D4A1A","#1A2D4A",
+  "#4A1A2D","#1A4A4A","#3A1A00","#0A0A1A","#050505","#000000"
+];
+var bgIndex = 0;
+var visitedSet = {};
+var visitedCount = 0;
+
+var zoomColors = [
+  { "10":"#378ADD","172":"#1D9E75","1921":"#7F77DD","1922":"#D85A30","203":"#BA7517","dns":"#E24B4A","cf":"#D4537E","quad":"#888780" },
+  { "10":"#5BA8FF","172":"#26C98F","1921":"#A09AFF","1922":"#FF7040","203":"#E89A20","dns":"#FF6B6A","cf":"#FF6EA0","quad":"#AAAAAA" },
+  { "10":"#FF4444","172":"#FF5555","1921":"#FF4488","1922":"#FF6622","203":"#FF8800","dns":"#FF2222","cf":"#FF2266","quad":"#FF5555" }
+];
+var currentZoomLevel = 0;
+
+// --- BUILD LAYOUT: use force sim briefly to get initial positions, then FREEZE ---
+// Run simulation to convergence, then pin all nodes (no ongoing physics)
+var simulation = d3.forceSimulation(nodesData)
+  .force("link", d3.forceLink(linksData).id(function(d){ return d.id; }).distance(100))
+  .force("charge", d3.forceManyBody().strength(-400))
+  .force("center", d3.forceCenter(W/2, H/2))
+  .force("collision", d3.forceCollide().radius(function(d){ return d.r + 14; }))
+  .stop();
+
+// Run synchronously until settled
+for (var i = 0; i < 300; i++) simulation.tick();
+
+// Build id→node map for link drawing
+var nodeById = {};
+nodesData.forEach(function(n) { nodeById[n.id] = n; });
+
+// Resolve link source/target to node objects
+linksData.forEach(function(l) {
+  if (typeof l.source === "string") l.source = nodeById[l.source];
+  if (typeof l.target === "string") l.target = nodeById[l.target];
+});
+
+// --- SVG SETUP ---
+var svg = d3.select("#graph").attr("width", W).attr("height", H);
+
+// Zoom + pan (no node physics — pure viewport transform)
+var zoomG = svg.append("g");
+var zoomBehaviour = d3.zoom()
+  .scaleExtent([0.2, 5])
+  .on("zoom", function(event) {
+    zoomG.attr("transform", event.transform);
+    var z = event.transform.k;
+    var zl = z > 1.8 ? 2 : (z > 1.2 ? 1 : 0);
+    if (zl !== currentZoomLevel) {
+      currentZoomLevel = zl;
+      var labelColor = zl === 2 ? "#FF3333" : (zl === 1 ? "#FFAAAA" : "#ffffff");
+      zoomG.selectAll(".node-label").style("fill", labelColor);
+      zoomG.selectAll(".node-circle").each(function(d) {
+        if (!visitedSet[d.id]) {
+          d3.select(this).attr("fill", zoomColors[zl][d.subnet]);
+        }
+      });
+    }
+  });
+svg.call(zoomBehaviour);
+
+// --- DRAW LINKS ---
+var linkSel = zoomG.append("g").selectAll("line")
+  .data(linksData).enter().append("line")
+  .attr("class","link")
+  .attr("x1", function(d){ return d.source.x; })
+  .attr("y1", function(d){ return d.source.y; })
+  .attr("x2", function(d){ return d.target.x; })
+  .attr("y2", function(d){ return d.target.y; });
+
+// --- DRAW NODES ---
+var tooltip = document.getElementById("tooltip");
+
+// DRAG: moves node + redraws connected links. No physics.
+function dragNode() {
+  return d3.drag()
+    .on("start", function(event, d) {
+      d3.select(this.parentNode).raise();
+    })
+    .on("drag", function(event, d) {
+      // event.x/y are already in the zoomG coordinate space
+      d.x = event.x;
+      d.y = event.y;
+      d3.select(this.parentNode).attr("transform", "translate("+d.x+","+d.y+")");
+      // Redraw connected links
+      linkSel
+        .filter(function(l){ return l.source === d || l.target === d; })
+        .attr("x1", function(l){ return l.source.x; })
+        .attr("y1", function(l){ return l.source.y; })
+        .attr("x2", function(l){ return l.target.x; })
+        .attr("y2", function(l){ return l.target.y; });
+    });
+}
+
+var nodeG = zoomG.append("g").selectAll(".node-g")
+  .data(nodesData).enter().append("g")
+  .attr("class","node-g")
+  .attr("transform", function(d){ return "translate("+d.x+","+d.y+")"; })
+  .call(dragNode());
+
+nodeG.append("circle")
+  .attr("class","node-circle")
+  .attr("r", function(d){ return d.r; })
+  .attr("fill", function(d){ return d.fill; })
+  .on("mouseover", function(event, d) {
+    tooltip.innerHTML = "<b>" + d.id + "</b><br>Bandwidth: " + (d.r * 4) + " Mbps" + (visitedSet[d.id] ? "&nbsp;✓" : "");
+    tooltip.style.opacity = 1;
+    tooltip.style.left = (event.clientX + 15) + "px";
+    tooltip.style.top  = (event.clientY - 8) + "px";
+  })
+  .on("mousemove", function(event) {
+    tooltip.style.left = (event.clientX + 15) + "px";
+    tooltip.style.top  = (event.clientY - 8) + "px";
+  })
+  .on("mouseout", function() { tooltip.style.opacity = 0; })
+  .on("click", function(event, d) {
+    if (visitedSet[d.id]) return;
+    visitedSet[d.id] = true;
+    visitedCount++;
+
+    // Node turns purple
+    d3.select(this).attr("fill","#7F77DD");
+
+    // Connected edges turn purple
+    linkSel.filter(function(l){
+      return l.source.id === d.id || l.target.id === d.id;
+    }).classed("visited", true);
+
+    // Cycle background
+    bgIndex = Math.min(bgIndex + 1, bgPalette.length - 1);
+    document.body.style.backgroundColor = bgPalette[bgIndex];
+
+    // All visited → black → navigate
+   if (visitedCount >= nodesData.length) {
+      setTimeout(function() {
+        document.body.style.transition = "background-color 1.5s ease";
+        document.body.style.backgroundColor = "#000000";
+        setTimeout(function() {
+          window.location.href = 'ispbuffet.html';
+        }, 1600);
+      }, 2000);
+    }
+  });
+
+nodeG.append("text")
+  .attr("class","node-label")
+  .attr("dy", function(d){ return d.r + 14; })
+  .text(function(d){ return d.id; });
+
+// --- RESIZE ---
+window.addEventListener("resize", function() {
+  W = window.innerWidth; H = window.innerHeight;
+  svg.attr("width", W).attr("height", H);
+});
+
+document.getElementById('next-btn').addEventListener('click', function() { window.location.href = 'ispbuffet.html'; });
+</script>
+</body>
+</html>

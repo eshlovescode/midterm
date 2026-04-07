@@ -1,0 +1,106 @@
+
+<script src="https://cdn.anychart.com/releases/8.12.1/js/anychart-core.min.js"></script>
+<script src="https://cdn.anychart.com/releases/8.12.1/js/anychart-graph.min.js"></script>
+<div id="container" style="width:100%;height:600px;"></div>
+<script>
+anychart.onDocumentReady(function () {
+  var data = {
+    "nodes": [
+      { "id": "10.0.0.1",    "value": 90,  "fill": "#378ADD", "height": 55 },
+      { "id": "10.0.0.2",    "value": 70,  "fill": "#378ADD", "height": 45 },
+      { "id": "10.0.0.3",    "value": 60,  "fill": "#378ADD", "height": 40 },
+      { "id": "172.16.0.1",  "value": 80,  "fill": "#1D9E75", "height": 50 },
+      { "id": "172.16.0.2",  "value": 65,  "fill": "#1D9E75", "height": 42 },
+      { "id": "172.16.0.3",  "value": 55,  "fill": "#1D9E75", "height": 38 },
+      { "id": "192.168.1.1", "value": 75,  "fill": "#7F77DD", "height": 48 },
+      { "id": "192.168.1.2", "value": 50,  "fill": "#7F77DD", "height": 36 },
+      { "id": "192.168.1.3", "value": 45,  "fill": "#7F77DD", "height": 34 },
+      { "id": "192.168.2.1", "value": 85,  "fill": "#D85A30", "height": 52 },
+      { "id": "192.168.2.2", "value": 60,  "fill": "#D85A30", "height": 40 },
+      { "id": "192.168.2.3", "value": 48,  "fill": "#D85A30", "height": 35 },
+      { "id": "203.0.113.1", "value": 95,  "fill": "#BA7517", "height": 58 },
+      { "id": "203.0.113.2", "value": 70,  "fill": "#BA7517", "height": 44 },
+      { "id": "203.0.113.3", "value": 55,  "fill": "#BA7517", "height": 38 },
+      { "id": "8.8.8.8",     "value": 100, "fill": "#E24B4A", "height": 62 },
+      { "id": "8.8.4.4",     "value": 88,  "fill": "#E24B4A", "height": 54 },
+      { "id": "1.1.1.1",     "value": 92,  "fill": "#D4537E", "height": 56 },
+      { "id": "9.9.9.9",     "value": 78,  "fill": "#888780", "height": 48 },
+      { "id": "4.4.4.4",     "value": 72,  "fill": "#888780", "height": 46 }
+    ],
+    "edges": [
+      { "from": "10.0.0.1",    "to": "10.0.0.2",    "latency": 5  },
+      { "from": "10.0.0.1",    "to": "10.0.0.3",    "latency": 8  },
+      { "from": "10.0.0.2",    "to": "172.16.0.1",  "latency": 12 },
+      { "from": "10.0.0.3",    "to": "172.16.0.2",  "latency": 15 },
+      { "from": "172.16.0.1",  "to": "172.16.0.2",  "latency": 6  },
+      { "from": "172.16.0.1",  "to": "172.16.0.3",  "latency": 9  },
+      { "from": "172.16.0.2",  "to": "192.168.1.1", "latency": 20 },
+      { "from": "172.16.0.3",  "to": "192.168.1.2", "latency": 18 },
+      { "from": "192.168.1.1", "to": "192.168.1.2", "latency": 4  },
+      { "from": "192.168.1.1", "to": "192.168.1.3", "latency": 7  },
+      { "from": "192.168.1.2", "to": "192.168.2.1", "latency": 25 },
+      { "from": "192.168.1.3", "to": "192.168.2.2", "latency": 22 },
+      { "from": "192.168.2.1", "to": "192.168.2.2", "latency": 5  },
+      { "from": "192.168.2.1", "to": "192.168.2.3", "latency": 10 },
+      { "from": "192.168.2.2", "to": "203.0.113.1", "latency": 30 },
+      { "from": "192.168.2.3", "to": "203.0.113.2", "latency": 28 },
+      { "from": "203.0.113.1", "to": "203.0.113.2", "latency": 8  },
+      { "from": "203.0.113.1", "to": "203.0.113.3", "latency": 11 },
+      { "from": "203.0.113.2", "to": "8.8.8.8",     "latency": 35 },
+      { "from": "203.0.113.3", "to": "8.8.4.4",     "latency": 32 },
+      { "from": "8.8.8.8",     "to": "8.8.4.4",     "latency": 3  },
+      { "from": "8.8.8.8",     "to": "1.1.1.1",     "latency": 14 },
+      { "from": "8.8.4.4",     "to": "9.9.9.9",     "latency": 18 },
+      { "from": "1.1.1.1",     "to": "9.9.9.9",     "latency": 12 },
+      { "from": "1.1.1.1",     "to": "4.4.4.4",     "latency": 16 },
+      { "from": "9.9.9.9",     "to": "4.4.4.4",     "latency": 9  },
+      { "from": "4.4.4.4",     "to": "10.0.0.1",    "latency": 40 },
+      { "from": "8.8.8.8",     "to": "172.16.0.1",  "latency": 50 },
+      { "from": "1.1.1.1",     "to": "192.168.2.1", "latency": 45 },
+      { "from": "9.9.9.9",     "to": "203.0.113.3", "latency": 38 }
+    ]
+  };
+
+  var chart = anychart.graph(data);
+
+  var nodes = chart.nodes();
+  nodes.labels().enabled(true);
+  nodes.labels().fontSize(11);
+  nodes.labels().fontColor("#222222");
+  nodes.tooltip().useHtml(true);
+  nodes.tooltip().format(function(e) {
+    var id = e.getData("id");
+    var value = e.getData("value");
+    return '<b>' + id + '</b><br>Bandwidth: <b>' + value + ' Mbps</b>';
+  });
+
+  var edges = chart.edges();
+  edges.stroke("#5DCAA5", 2, "8 4");
+  edges.tooltip().useHtml(true);
+  edges.tooltip().format(function(e) {
+    var from = e.getData("from");
+    var to = e.getData("to");
+    var latency = e.getData("latency");
+    return 'From <b>' + from + '</b><br>To <b>' + to + '</b><br>Latency: <b>' + latency + ' ms</b>';
+  });
+
+  chart.listen("edgeClick", function(e) {
+    var edge = e.edge;
+    var currentStroke = edge.stroke();
+    var isPurple = currentStroke && (
+      (typeof currentStroke === "string" && currentStroke.indexOf("7F77DD") !== -1) ||
+      (typeof currentStroke === "object" && currentStroke.color && currentStroke.color.indexOf("7F77DD") !== -1)
+    );
+    if (isPurple) {
+      edge.stroke("#5DCAA5", 2, "8 4");
+    } else {
+      edge.stroke("#7F77DD", 3, "");
+    }
+  });
+
+  chart.title().text("Internet Network Graph");
+  chart.title().fontSize(18);
+  chart.container("container");
+  chart.draw();
+});
+</script>
